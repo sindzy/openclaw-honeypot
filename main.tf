@@ -45,7 +45,7 @@ resource "aws_lightsail_instance" "bait" {
     openai_key = var.openai_api_key
 
   # Add Management IP to Firewall
-    openai_key = var.management_ip
+    management_ip = var.management_ip
   })
 }
 
@@ -64,7 +64,7 @@ resource "aws_lightsail_instance" "proxy" {
     target_ip = aws_lightsail_instance.bait.private_ip_address
 
     # Add Management IP to Firewall
-    openai_key = var.management_ip
+    management_ip = var.management_ip
   })
 }
 
@@ -94,7 +94,7 @@ resource "aws_lightsail_instance_public_ports" "proxy_fw" {
     protocol  = "tcp"
     from_port = 22
     to_port   = 22
-    cidrs     = [" ${var.management_ip}/32"]
+    cidrs     = ["${var.management_ip}/32"]
   }
   
   # MIMICRY: Port 3000 (Standard Web UI)
