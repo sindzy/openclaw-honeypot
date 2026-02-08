@@ -15,11 +15,11 @@ provider "aws" {
 variable "openai_api_key" {
   description = "OpenAI API Key for the Bait"
   type        = string
-  sensitive   = true
-
+  sensitive   = true 
 }
- variable "management_ip" {
-  description = "Management IP Address"
+
+variable "management_ip" {
+  description = "Management IP Address (Your Home IP)"
   type        = string
   sensitive   = true 
 }
@@ -37,16 +37,16 @@ resource "aws_lightsail_instance" "bait" {
   blueprint_id      = "ubuntu_22_04"
   bundle_id         = "nano_3_2"
   key_pair_name     = aws_lightsail_key_pair.lab_key.name
+  
+  # DISABLE IPv6 (Reduces attack surface)
+  ip_address_type   = "ipv4"
+  
   tags              = { Role = "Victim" }
 
-  # Inject Code + Secret Key
-  user_data = templatefile("${path.module}/setup_bait.tftpl", {
+  user_data = replace(templatefile("${path.module}/setup_bait.tftpl", {
     app_code   = file("${path.module}/agent_mimic.py")
     openai_key = var.openai_api_key
-
-  # Add Management IP to Firewall
-    management_ip = var.management_ip
-  })
+  }), "\r", "")
 }
 
 # --- HOST 2: THE PROXY (1GB) ---
@@ -54,24 +54,27 @@ resource "aws_lightsail_instance" "proxy" {
   name              = "vault-proxy"
   availability_zone = "ap-southeast-2a"
   blueprint_id      = "ubuntu_22_04"
-  bundle_id         = "micro_3_2" # 1GB RAM (Reserved for Manual Elastic Install)
+  bundle_id         = "micro_3_2"
   key_pair_name     = aws_lightsail_key_pair.lab_key.name
+  
+  # DISABLE IPv6
+  ip_address_type   = "ipv4"
+
   tags              = { Role = "Controller" }
 
-  # Inject Code + Dynamic Bait IP
-  user_data = templatefile("${path.module}/setup_proxy.tftpl", {
+  user_data = replace(templatefile("${path.module}/setup_proxy.tftpl", {
     app_code  = file("${path.module}/research_proxy.py")
     target_ip = aws_lightsail_instance.bait.private_ip_address
-
-    # Add Management IP to Firewall
-    management_ip = var.management_ip
-  })
+  }), "\r", "")
 }
 
 # --- FIREWALL RULES ---
 resource "aws_lightsail_instance_public_ports" "bait_fw" {
   instance_name = aws_lightsail_instance.bait.name
   
+  # FORCE WAIT: Ensure instance is ready before applying rules
+  depends_on = [aws_lightsail_instance.bait]
+
   port_info {
     protocol  = "tcp"
     from_port = 22
@@ -90,6 +93,9 @@ resource "aws_lightsail_instance_public_ports" "bait_fw" {
 resource "aws_lightsail_instance_public_ports" "proxy_fw" {
   instance_name = aws_lightsail_instance.proxy.name
   
+  # FORCE WAIT: Ensure instance is ready before applying rules
+  depends_on = [aws_lightsail_instance.proxy]
+
   port_info {
     protocol  = "tcp"
     from_port = 22
@@ -97,7 +103,6 @@ resource "aws_lightsail_instance_public_ports" "proxy_fw" {
     cidrs     = ["${var.management_ip}/32"]
   }
   
-  # MIMICRY: Port 3000 (Standard Web UI)
   port_info {
     protocol  = "tcp"
     from_port = 3000
