@@ -3,6 +3,13 @@
 # 0. FIX TIMEZONE (Sydney/AEDT)
 timedatectl set-timezone Australia/Sydney
 
+# Create 2GB Swap (Crucial for small instances)
+fallocate -l 2G /swapfile
+chmod 600 /swapfile
+mkswap /swapfile
+swapon /swapfile
+echo '/swapfile none swap sw 0 0' >> /etc/fstab
+
 # 1. Install Dependencies
 apt-get update
 apt-get install -y python3-pip python3-venv unzip
