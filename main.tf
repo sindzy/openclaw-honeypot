@@ -15,6 +15,12 @@ provider "aws" {
 variable "openai_api_key" {
   description = "OpenAI API Key for the Bait"
   type        = string
+  sensitive   = true
+
+}
+ variable "management_ip" {
+  description = "Management IP Address"
+  type        = string
   sensitive   = true 
 }
 
@@ -37,6 +43,9 @@ resource "aws_lightsail_instance" "bait" {
   user_data = templatefile("${path.module}/setup_bait.tftpl", {
     app_code   = file("${path.module}/agent_mimic.py")
     openai_key = var.openai_api_key
+
+  # Add Management IP to Firewall
+    openai_key = var.management_ip
   })
 }
 
@@ -53,6 +62,9 @@ resource "aws_lightsail_instance" "proxy" {
   user_data = templatefile("${path.module}/setup_proxy.tftpl", {
     app_code  = file("${path.module}/research_proxy.py")
     target_ip = aws_lightsail_instance.bait.private_ip_address
+
+    # Add Management IP to Firewall
+    openai_key = var.management_ip
   })
 }
 
@@ -64,7 +76,7 @@ resource "aws_lightsail_instance_public_ports" "bait_fw" {
     protocol  = "tcp"
     from_port = 22
     to_port   = 22
-    cidrs     = ["0.0.0.0/0"]
+    cidrs     = ["${var.management_ip}/32"]
   }
   
   port_info {
@@ -82,7 +94,7 @@ resource "aws_lightsail_instance_public_ports" "proxy_fw" {
     protocol  = "tcp"
     from_port = 22
     to_port   = 22
-    cidrs     = ["0.0.0.0/0"]
+    cidrs     = [" ${var.management_ip}/32"]
   }
   
   # MIMICRY: Port 3000 (Standard Web UI)
