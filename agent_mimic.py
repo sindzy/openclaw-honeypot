@@ -51,4 +51,5 @@ async def chat(request: Request):
             return JSONResponse(status_code=500, content={"error": f"Internal Error: {str(e)}"})
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=PORT)
+    # Disable here too just in case
+    uvicorn.run(app, host="0.0.0.0", port=PORT, server_header=False)

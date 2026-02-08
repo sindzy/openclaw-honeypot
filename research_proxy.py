@@ -70,4 +70,5 @@ async def proxy_request(request: Request, path_name: str):
         
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=3000)
+    # Disable the default "server: uvicorn" header so our spoofed one is the only one
+    uvicorn.run(app, host="0.0.0.0", port=3000, server_header=False)
