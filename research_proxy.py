@@ -22,7 +22,7 @@ async def spoof_server_header(request: Request, call_next):
     response.headers["Server"] = "OpenClaw/1.4.2-beta"
     return response
 
-# 2. CATCH-ALL ROUTE: LOGGING & FORWARDING (The Missing Link)
+# 2. CATCH-ALL ROUTE: LOGGING & FORWARDING
 @app.api_route("/{path_name:path}", methods=["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "PATCH"])
 async def proxy_request(request: Request, path_name: str):
     # A. LOGGING
@@ -33,7 +33,8 @@ async def proxy_request(request: Request, path_name: str):
         payload = "BINARY"
     
     log_entry = {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        # FIX: Use system timezone (Sydney) instead of forcing UTC
+        "timestamp": datetime.now().astimezone().isoformat(),
         "event_type": "ingress",
         "src_ip": request.client.host,
         "method": request.method,
@@ -49,7 +50,7 @@ async def proxy_request(request: Request, path_name: str):
         if request.url.query:
             url += "?" + request.url.query
             
-        # Clean headers (avoid Host mismatches)
+        # Clean headers
         proxy_headers = dict(request.headers)
         proxy_headers.pop("host", None)
         proxy_headers.pop("content-length", None) 
@@ -70,5 +71,4 @@ async def proxy_request(request: Request, path_name: str):
         
 if __name__ == "__main__":
     import uvicorn
-    # Disable the default "server: uvicorn" header so our spoofed one is the only one
     uvicorn.run(app, host="0.0.0.0", port=3000, server_header=False)
