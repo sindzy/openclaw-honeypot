@@ -29,7 +29,7 @@ resource "aws_lightsail_instance" "bait" {
   name              = "bait-victim"
   availability_zone = "ap-southeast-2a"
   blueprint_id      = "ubuntu_22_04"
-  bundle_id         = "nano_3_0"
+  bundle_id         = "nano_3_2"
   key_pair_name     = aws_lightsail_key_pair.lab_key.name
   tags              = { Role = "Victim" }
 
@@ -45,7 +45,7 @@ resource "aws_lightsail_instance" "proxy" {
   name              = "vault-proxy"
   availability_zone = "ap-southeast-2a"
   blueprint_id      = "ubuntu_22_04"
-  bundle_id         = "micro_3_0" # 1GB RAM (Reserved for Manual Elastic Install)
+  bundle_id         = "micro_3_2" # 1GB RAM (Reserved for Manual Elastic Install)
   key_pair_name     = aws_lightsail_key_pair.lab_key.name
   tags              = { Role = "Controller" }
 
