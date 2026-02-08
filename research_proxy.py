@@ -19,7 +19,8 @@ client = httpx.AsyncClient(base_url=TARGET_URL, timeout=60.0)
 @app.middleware("http")
 async def spoof_server_header(request: Request, call_next):
     response = await call_next(request)
-    response.headers["Server"] = "OpenClaw/1.4.2-beta"
+    response.headers["Server"] = "openclaw-gateway/1.4.2" 
+    response.headers["Cache-Control"] = "no-cache"
     return response
 
 # 2. CATCH-ALL ROUTE: LOGGING & FORWARDING
@@ -32,14 +33,20 @@ async def proxy_request(request: Request, path_name: str):
     except:
         payload = "BINARY"
     
+    # Extract Headers for Fingerprinting (Shodan Detection)
+    # We convert the immutable Headers object to a standard dict
+    request_headers = dict(request.headers)
+
     log_entry = {
-        # FIX: Use system timezone (Sydney) instead of forcing UTC
+        # FIX: Use system timezone (Sydney)
         "timestamp": datetime.now().astimezone().isoformat(),
         "event_type": "ingress",
         "src_ip": request.client.host,
         "method": request.method,
         "path": request.url.path,
-        "payload_snippet": payload[:1000]
+        "http_version": request.scope.get("http_version", "1.1"),
+        "headers": request_headers, # <--- THE SHODAN FINGERPRINT
+        "payload_snippet": payload[:2000] # Increased capture size
     }
     logger.info(json.dumps(log_entry))
 
@@ -50,7 +57,7 @@ async def proxy_request(request: Request, path_name: str):
         if request.url.query:
             url += "?" + request.url.query
             
-        # Clean headers
+        # Clean headers to avoid Host mismatches upstream
         proxy_headers = dict(request.headers)
         proxy_headers.pop("host", None)
         proxy_headers.pop("content-length", None) 
@@ -71,4 +78,5 @@ async def proxy_request(request: Request, path_name: str):
         
 if __name__ == "__main__":
     import uvicorn
+    # server_header=False ensures we don't leak "uvicorn" alongside "OpenClaw"
     uvicorn.run(app, host="0.0.0.0", port=3000, server_header=False)
