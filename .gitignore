@@ -1,17 +1,17 @@
-# Terraform locking & state
 *.tfstate
 *.tfstate.backup
 .terraform/
 .terraform.lock.hcl
-
-# SSH Keys & Secrets
-*.pem
-.env
-.ssh
-id_rsa
-honeypot-key
+terraform.tfvars
+*.auto.tfvars
 
 # Python
 __pycache__/
 *.pyc
 venv/
+
+# SSH Keys
+*.pem
+.ssh/
+id_rsa
+honeypot-key*

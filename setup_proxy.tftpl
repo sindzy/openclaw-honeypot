@@ -1,0 +1,34 @@
+#!/bin/bash
+# 1. Install System Tools
+apt-get update
+apt-get install -y python3-pip unzip curl
+
+# 2. Install Python Deps
+pip3 install fastapi uvicorn httpx
+
+# 3. Write Application Code
+cat <<EOF > /home/ubuntu/research_proxy.py
+${app_code}
+EOF
+
+# 4. Create Systemd Service
+cat <<EOF > /etc/systemd/system/proxy.service
+[Unit]
+Description=Research Proxy
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu
+ExecStart=/usr/bin/python3 /home/ubuntu/research_proxy.py
+Restart=always
+# DYNAMIC INJECTION of the Bait IP
+Environment="TARGET_IP=${target_ip}"
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable proxy
+systemctl start proxy

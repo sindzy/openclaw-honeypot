@@ -1,0 +1,35 @@
+#!/bin/bash
+# 1. Install Dependencies
+apt-get update
+apt-get install -y python3-pip python3-venv unzip
+pip3 install fastapi uvicorn httpx mmh3
+
+# 2. Deploy Favicon
+wget -O /home/ubuntu/favicon.ico https://github.com/openclaw/openclaw/raw/main/public/favicon.ico
+
+# 3. Write Application Code (Injected by Terraform)
+cat <<EOF > /home/ubuntu/agent_mimic.py
+${app_code}
+EOF
+
+# 4. Create Service
+cat <<EOF > /etc/systemd/system/mimic.service
+[Unit]
+Description=OpenClaw Mimic
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu
+ExecStart=/usr/local/bin/uvicorn agent_mimic:app --host 0.0.0.0 --port 3000
+Restart=always
+Environment="OPENAI_API_KEY=${openai_key}"
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# 5. Start
+systemctl daemon-reload
+systemctl enable mimic
+systemctl start mimic
