@@ -109,6 +109,13 @@ resource "aws_lightsail_instance_public_ports" "proxy_fw" {
     to_port   = 3000
     cidrs     = ["0.0.0.0/0"]
   }
+
+  port_info {
+    protocol  = "tcp"
+    from_port = 18789
+    to_port   = 18789
+    cidrs     = ["0.0.0.0/0"]
+  }
 }
 
 output "proxy_public_ip" {

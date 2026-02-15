@@ -17,15 +17,15 @@ apt-get install -y python3-pip unzip curl
 # 2. Install Python Deps
 pip3 install fastapi uvicorn httpx
 
-# 3. Write Application Code
+# Write the "Polymorphic" Code
 cat <<EOF > /home/ubuntu/research_proxy.py
 ${app_code}
 EOF
 
-# 4. Create Systemd Service
-cat <<EOF > /etc/systemd/system/proxy.service
+# --- SERVICE 1: The "Dev" Trap (Port 3000) ---
+cat <<EOF > /etc/systemd/system/proxy-dev.service
 [Unit]
-Description=Research Proxy
+Description=Research Proxy (Dev Port 3000)
 After=network.target
 
 [Service]
@@ -33,13 +33,36 @@ User=ubuntu
 WorkingDirectory=/home/ubuntu
 ExecStart=/usr/bin/python3 /home/ubuntu/research_proxy.py
 Restart=always
-# DYNAMIC INJECTION of the Bait IP
 Environment="TARGET_IP=${target_ip}"
+Environment="LISTEN_PORT=3000"
+Environment="LOG_FILE=/home/ubuntu/forensics_3000.jsonl"
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
+# --- SERVICE 2: The "Control" Trap (Port 18789) ---
+cat <<EOF > /etc/systemd/system/proxy-control.service
+[Unit]
+Description=Research Proxy (Control Port 18789)
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu
+ExecStart=/usr/bin/python3 /home/ubuntu/research_proxy.py
+Restart=always
+Environment="TARGET_IP=${target_ip}"
+Environment="LISTEN_PORT=18789"
+Environment="LOG_FILE=/home/ubuntu/forensics_18789.jsonl"
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Start Both Barrels
 systemctl daemon-reload
-systemctl enable proxy
-systemctl start proxy
+systemctl enable proxy-dev
+systemctl enable proxy-control
+systemctl start proxy-dev
+systemctl start proxy-control
